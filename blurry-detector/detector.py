@@ -22,42 +22,51 @@ def image_rescale(image, scale):
     rescaled = cv2.resize(image, dim, cv2.INTER_AREA)
     return rescaled
 
-# Not enough input arguments, exit
-if len(sys.argv) == 1:
-    print "Not enough input arguments. Please input an image"
-    sys.exit()
+def main(argv):
+    """
+    Detemine if an image is blurry using a threshold on the variance of the laplacian
+    """
+    # Not enough input arguments, exit
+    if len(argv) == 1:
+        print('Not enough input arguments. Please input an image')
+        sys.exit()
 
-# Too many input arguments, exit
-if len(sys.argv) > 2:
-    print "Too many input arguments. Please input only the image"
-    sys.exit()
+    # Too many input arguments, exit
+    if len(argv) > 2:
+        print('Too many input arguments. Please input only the image')
+        sys.exit()
 
-image = cv2.imread(sys.argv[1])
-#image = cv2.imread('../blurry-data/b1.JPG')
+    image = cv2.imread(argv[1])
 
-# Check image has been loaded
-if image is None:
-    print ('Error in opening image')
-    sys.exit()
+    # Check image has been loaded
+    if image is None:
+        print('Error in opening image')
+        sys.exit()
 
-# Rescale the image to 20% of original size
-resImage = image_rescale(image, 0.2)
+    # Rescale the image to 20% of original size
+    #resImage = image_rescale(image, 1)
 
-# Convert to grayscale
-grayImage = cv2.cvtColor(resImage, cv2.COLOR_BGR2GRAY)
+    # Convert to grayscale
+    grayImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-# Compute the laplacian with default 3x3 kernel
-lapImage = cv2.Laplacian(grayImage, cv2.CV_64F)
+    # Compute the laplacian with default 3x3 kernel
+    lapImage = cv2.Laplacian(grayImage, cv2.CV_64F).var()
 
-# Compute the variance of the laplacian
-imVar = lapImage.var()
-print(imVar)
+    # Compute the variance of the laplacian
+    imVar = lapImage
+    print(imVar)
 
-# Decide if faulty or not - need to tune threshold
-if imVar > 500:
-    print(0)
-else:
-    print(1)
+    # Decide if blurry or not.
+    # Low variance of laplacian means low detail therefore blurry.
+    # Threshold of 100 chosen by through analysis of training set.
+    # This value classifies the two sets quite well.
+    if imVar > 110:
+        print(0)
+    else:
+        print(1)
 
-cv2.imshow("Image", grayImage)
-cv2.waitKey(0)
+    #cv2.imshow("Image", grayImage)
+    #cv2.waitKey(0)    
+
+if __name__ == "__main__":
+    main(sys.argv)
