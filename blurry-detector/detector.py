@@ -22,6 +22,39 @@ def image_rescale(image, scale):
     rescaled = cv2.resize(image, dim, cv2.INTER_AREA)
     return rescaled
 
+def image_segment(image):
+    """
+    Break given image into a grid (4x3) of smaller segments of original image 
+    Return the image in single array of 12 layers
+    """    
+    # Image size
+    (H, W) = image.shape[:2]
+
+    # Grid segment size
+    gridH = H / 3
+    gridW = W / 4
+
+    # Track current position
+    currGH = 0
+    currGW = 0
+
+    # Prepare the image array
+    cropImg = np.ndarray((gridH, gridH, 12), np.uint8)
+
+    # Create the image array
+    for i in range(0,12):
+        cropImg[:,:,i] = image[currGH:currGH+gridH, currGW:currGW+gridW]
+        im = cropImg[:,:,i]
+        # cv2.imshow("Image", im)
+        # cv2.waitKey(0)
+        currGH += gridH
+        # If we reach the end of the col, reset to next row
+        if (currGH == H):
+            currGH = 0
+            currGW += gridW
+
+    return cropImg
+
 def main(argv):
     """
     Detemine if an image is blurry using a threshold on the variance of the laplacian
@@ -49,11 +82,22 @@ def main(argv):
     # Convert to grayscale
     grayImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
+    # Break the image down into a grid
+    imageGrid = image_segment(grayImage)
+
+    sum = 0
+    for i in range(0,12):
+        lapImage = cv2.Laplacian(imageGrid[:,:,i], cv2.CV_64F).var()
+        imVar = lapImage
+        sum = sum + imVar
+        print(imVar)
+    # avg = sum/12
+    # print(avg)
     # Compute the laplacian with default 3x3 kernel
-    lapImage = cv2.Laplacian(grayImage, cv2.CV_64F).var()
+    lapImage = cv2.Laplacian(grayImage, cv2.CV_64F)
 
     # Compute the variance of the laplacian
-    imVar = lapImage
+    imVar = lapImage.var()
     print(imVar)
 
     # Decide if blurry or not.
