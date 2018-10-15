@@ -22,27 +22,39 @@ def image_rescale(image, scale):
     rescaled = cv2.resize(image, dim, cv2.INTER_AREA)
     return rescaled
 
-def image_segment(image):
+def image_segment(image, gridElementsX, gridElementsY):
     """
-    Break given image into a grid (4x3) of smaller segments of original image 
-    Return the image in single array of 12 layers
+    Break given greyscale image into a grid of smaller segments of
+    original image given by the grid elements passed in
+    Return the image in single array of layers
     """    
     # Image size
     (H, W) = image.shape[:2]
 
     # Grid segment size
-    gridH = H / 3
-    gridW = W / 4
+    gridH = H / float(gridElementsY)
+    gridW = W / float(gridElementsX)
+
+    # Exit early if the elements size does not fit into image
+    if(not gridH.is_integer()):
+        print('gridElementsY in image_segment() not compatible with image size')
+        sys.exit()
+    if (not gridW.is_integer()):
+        print('gridElementsX in image_segment() not compatible with image size')
+        sys.exit()
 
     # Track current position
     currGH = 0
     currGW = 0
 
+    # Total number of grid elements
+    gridElements = gridElementsX * gridElementsY
+
     # Prepare the image array
-    cropImg = np.ndarray((gridH, gridH, 12), np.uint8)
+    cropImg = np.ndarray((gridH, gridW, gridElements), np.uint8)
 
     # Create the image array
-    for i in range(0,12):
+    for i in range(0, gridElements):
         cropImg[:,:,i] = image[currGH:currGH+gridH, currGW:currGW+gridW]
         im = cropImg[:,:,i]
         # cv2.imshow("Image", im)
@@ -82,35 +94,47 @@ def main(argv):
     # Convert to grayscale
     grayImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    # Break the image down into a grid
-    imageGrid = image_segment(grayImage)
+    # Blur with a median filter to remove static/noise
+    blurImage = cv2.medianBlur(grayImage, 11)
 
+    # Grid elements in X
+    gridElementsX = 10
+
+    # Grid elements in Y
+    gridElementsY = 10
+
+    # Segment the image down into a grid
+    imageGrid = image_segment(blurImage, gridElementsX, gridElementsY)
+
+    # Total number of grid elements
+    gridElements = gridElementsX * gridElementsY
+
+    # Init the sum
     sum = 0
-    for i in range(0,12):
-        lapImage = cv2.Laplacian(imageGrid[:,:,i], cv2.CV_64F).var()
-        imVar = lapImage
-        sum = sum + imVar
-        print(imVar)
-    # avg = sum/12
-    # print(avg)
-    # Compute the laplacian with default 3x3 kernel
-    lapImage = cv2.Laplacian(grayImage, cv2.CV_64F)
 
-    # Compute the variance of the laplacian
-    imVar = lapImage.var()
-    print(imVar)
+    # Loop through images
+    for i in range(0, gridElements):
+        # Compute the variance of the laplacian of the image with default 3x3 kernel
+        imVar = cv2.Laplacian(imageGrid[:,:,i], cv2.CV_64F).var()
+        # Sum all the variance
+        sum = sum + imVar
+
+    # Compute the average
+    avgVar = sum/gridElements
+    #print(avgVar)
 
     # Decide if blurry or not.
     # Low variance of laplacian means low detail therefore blurry.
-    # Threshold of 100 chosen by through analysis of training set.
+    # Threshold of 5 chosen by through analysis of training set.
     # This value classifies the two sets quite well.
-    if imVar > 110:
+    if avgVar > 5:
         print(0)
     else:
         print(1)
 
-    #cv2.imshow("Image", grayImage)
-    #cv2.waitKey(0)    
+    # lapImage = cv2.Laplacian(blurImage, cv2.CV_64F)
+    # cv2.imshow("Image", lapImage)
+    # cv2.waitKey(0)
 
 if __name__ == "__main__":
     main(sys.argv)
