@@ -110,17 +110,24 @@ def main(argv):
     gridElements = gridElementsX * gridElementsY
 
     # Init the sum
-    sum = 0
+    totalVar = 0
+
+    # Init the average total elements
+    avgTotalElements = gridElements
 
     # Loop through images
     for i in range(0, gridElements):
         # Compute the variance of the laplacian of the image with default 3x3 kernel
         imVar = cv2.Laplacian(imageGrid[:,:,i], cv2.CV_64F).var()
+        # If there is zero variance in this grid element discard it
+        if (imVar == 0):
+            avgTotalElements -= 1
+            continue
         # Sum all the variance
-        sum = sum + imVar
+        totalVar += imVar
 
     # Compute the average
-    avgVar = sum/gridElements
+    avgVar = totalVar / avgTotalElements
     #print(avgVar)
 
     # Decide if blurry or not.
